@@ -95,6 +95,9 @@ enum ImageFormat
 	IMAGE_FORMAT_LINEAR_I8,
 	NUM_IMAGE_FORMATS
 };
+int ImageFormatBlock[39] = {4,4,3,3,2,1,2,1,1,3,3,4,4,8,16,16,4,2,2,2,8,2,2,4,8,8,4,4,12,16,4,4,4,4,4,3,3,2,1};
+
+
 
 struct Vector
 {
@@ -212,6 +215,52 @@ XTFFileHeader_t XTFFileHeader_Default() {
 
 #pragma pack()
 
+int blockSize(ImageFormat f) {
+	if (f == ImageFormat::IMAGE_FORMAT_DXT1 or f == ImageFormat::IMAGE_FORMAT_DXT1_ONEBITALPHA) {
+		return 8;
+	}
+	else if (f == ImageFormat::IMAGE_FORMAT_DXT3 or f == ImageFormat::IMAGE_FORMAT_DXT5) {
+		return 16;
+	}
+	else {
+		return 1;
+	}
+};
+int* getRes(int w, int h) {
+	int res[13] = { 0 };
+	int x = 0;
+	int i = 1;
+	while ((i / w) >= 1 and (h / i) >= 1) {
+		res[x++] = ((i / w) * (h / i));
+		i = i << 1;
+	}
+	int* newres = new int[x];
+	memcpy(&newres, &res, sizeof(newres));
+	free(res);
+	return newres;
+};
+int* mipsize(int w, int h, ImageFormat f) {
+	int blkSize = blockSize(f);
+	int* resSize = getRes(w, h);
+	if (blkSize > 2) {
+		if (blkSize == 8) {
+			for (int x = 0; x < (sizeof(*resSize) / sizeof(int)); x++) {
+				resSize[x] /= 2;
+			}
+			return resSize;
+		}
+		else {
+			return resSize;
+		}
+	}
+	else {
+		for (int x = 0; x < (sizeof(*resSize) / sizeof(int)); x++) {
+			resSize[x] *= ImageFormatBlock[f];
+		}
+	}
+};
+
+
 const char VTFout[5] = "-vtf";
 const char XTFout[5] = "-xtf";
 
@@ -223,10 +272,10 @@ char typeIn[5] = "    ";
 
 int main(int argc, char* argv[])
 {
-	VTFFileHeader_t XTFhdr = VTFFileHeader_Default();
+	/*VTFFileHeader_t XTFhdr = VTFFileHeader_Default();
 	std::ofstream outfile;
 	outfile.open("test.bin", std::ios::binary);
-	outfile.write((char*)&XTFhdr, sizeof(XTFhdr));
+	outfile.write((char*)&XTFhdr, sizeof(XTFhdr));*/
 
 	
 
