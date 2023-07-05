@@ -127,7 +127,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="swizzle.cpp" />
     <ClCompile Include="vtfTrans.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="swizzle.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

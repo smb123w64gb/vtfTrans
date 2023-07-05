@@ -18,5 +18,13 @@
     <ClCompile Include="vtfTrans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="swizzle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="swizzle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

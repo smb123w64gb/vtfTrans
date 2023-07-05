@@ -272,6 +272,7 @@ const char* DefaultTest = "Command line: vtfTrans.exe\nusage\t: vtfTrans.exe -xt
 
 char typeIn[5] = "    ";
 
+#include "swizzle.h"
 
 
 int main(int argc, char* argv[])
@@ -320,6 +321,67 @@ void convertData(char* in, char* out, bool isXBOX) {
 	int* test = mipsize(512, 512, ImageFormat::IMAGE_FORMAT_BGR888, mipcount);
 	for (int x = 0; x < mipcount; x++) std::cout << test[x] << '\n';*/
 	if (isXBOX) {
+		infile.read((char*)&XTFhdr, sizeof(XTFFileHeader_t));//Read the header in
+
+		//Setup mips
+		int mipcount;
+		int* mips = mipsize(XTFhdr.width, XTFhdr.height, XTFhdr.imageFormat, mipcount);
+		int blk = blockSize(XTFhdr.imageFormat);
+		int lowResSize = XTFhdr.fallbackImageHeight * XTFhdr.fallbackImageWidth;
+		if (blk > 2) {
+			if (blk == 8) {
+				lowResSize /= 2;
+			}
+		}else{
+			lowResSize*= ImageFormatBlock[XTFhdr.imageFormat];
+		}
+		char * lowRes = new char[lowResSize];
+		char ** mipArray = new char*[mipcount];
+
+		VTFhdr.numMipLevels = mipcount;
+
+		if (XTFhdr.flags & TextureFlags::TEXTUREFLAGS_NOMIP) {
+			VTFhdr.numMipLevels = 1;
+			mipcount = 1;
+			mipArray = new char*[mipcount];
+			char* mip = new char[mips[0]];
+			mipArray[0] = mip;
+
+		}
+		else {
+			for (int x = 0; x < mipcount; x++)mipArray[x] = new char[mips[x]];
+		}
+
+		VTFhdr.width = XTFhdr.width;
+		VTFhdr.flags = XTFhdr.flags;
+		VTFhdr.height = XTFhdr.height;
+		VTFhdr.numFrames = XTFhdr.numFrames;
+
+		VTFhdr.reflectivity.x = XTFhdr.reflectivity.x;
+		VTFhdr.reflectivity.y = XTFhdr.reflectivity.y;
+		VTFhdr.reflectivity.z = XTFhdr.reflectivity.z;
+
+		VTFhdr.imageFormat = XTFhdr.imageFormat;
+
+		VTFhdr.lowResImageFormat = XTFhdr.imageFormat;
+		VTFhdr.lowResImageWidth = XTFhdr.fallbackImageWidth;
+		VTFhdr.lowResImageHeight = XTFhdr.fallbackImageHeight;
+
+		infile.seekg(XTFhdr.imageDataOffset, std::ios_base::beg);
+		for (int x = 0; x < mipcount; x++) {
+			infile.read((char*)&mipArray[x], mips[x]);
+		}
+		infile.read((char*)&lowRes, lowResSize);
+		infile.close();
+		if (blk < 8) {
+			for (int x = 0; x < mipcount; x++) {
+				char* tmp = new char[mips[x]];
+				unswizzle_rect((char*)&mipArray[x], XTFhdr.width, XTFhdr.height, (char*)&tmp, ImageFormatBlock[XTFhdr.imageFormat] * XTFhdr.width, ImageFormatBlock[XTFhdr.imageFormat]);
+			}
+		}
+
+
+
 
 
 	}
