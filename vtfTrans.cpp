@@ -265,14 +265,101 @@ int* mipsize(int w, int h, ImageFormat f,int &mipcount) {
 };
 
 
-const char VTFout[5] = "-vtf";
-const char XTFout[5] = "-xtf";
+const char VTFout[] = "-vtf";
+const char XTFout[] = "-xtf";
+const char VTFext[] = ".vtf";
+const char XTFext[] = ".xtf";
 
-const char* DefaultTest = "Command line: vtfTrans.exe\nusage\t: vtfTrans.exe -xtf texture.vtf <optional.xtf>\nCommon options:\n\t-xtf\t: Transition vtf to xtf\n\t-vtf\t: Transition xtf to vtf\n";
+const char DefaultTest[] = "Command line: vtfTrans.exe\nusage\t: vtfTrans.exe -xtf texture.vtf <optional.xtf>\nCommon options:\n\t-xtf\t: Transition vtf to xtf\n\t-vtf\t: Transition xtf to vtf\n";
 
 char typeIn[5] = "    ";
 
 #include "swizzle.h"
+
+
+void convertData(char* in, char* out, bool isXBOX) {
+	std::ifstream infile;
+	std::ofstream outfile;
+	infile.open(in);
+	outfile.open(out);
+	XTFFileHeader_t XTFhdr = XTFFileHeader_Default();
+	VTFFileHeader_t VTFhdr = VTFFileHeader_Default();
+
+	/*int mipcount = 1;
+	int* test = mipsize(512, 512, ImageFormat::IMAGE_FORMAT_BGR888, mipcount);
+	for (int x = 0; x < mipcount; x++) std::cout << test[x] << '\n';*/
+	if (isXBOX) {
+		infile.read((char*)&XTFhdr, sizeof(XTFFileHeader_t));//Read the header in
+		if (!strcmp("XTF", XTFhdr.fileTypeString)) {
+			//Setup mips
+			int mipcount;
+			int* mips = mipsize(XTFhdr.width, XTFhdr.height, XTFhdr.imageFormat, mipcount);
+			int blk = blockSize(XTFhdr.imageFormat);
+			int lowResSize = XTFhdr.fallbackImageHeight * XTFhdr.fallbackImageWidth;
+			if (blk > 2) {
+				if (blk == 8) {
+					lowResSize /= 2;
+				}
+			}
+			else {
+				lowResSize *= ImageFormatBlock[XTFhdr.imageFormat];
+			}
+			char* lowRes = new char[lowResSize];
+			char** mipArray = new char* [mipcount];
+
+			VTFhdr.numMipLevels = mipcount;
+
+			if (XTFhdr.flags & TextureFlags::TEXTUREFLAGS_NOMIP) {
+				VTFhdr.numMipLevels = 1;
+				mipcount = 1;
+				mipArray[0] = new char[mips[0]];
+
+			}
+			else {
+				for (int x = 0; x < mipcount; x++)mipArray[x] = new char[mips[x]];
+			}
+
+			VTFhdr.width = XTFhdr.width;
+			VTFhdr.flags = XTFhdr.flags;
+			VTFhdr.height = XTFhdr.height;
+			VTFhdr.numFrames = XTFhdr.numFrames;
+
+			VTFhdr.reflectivity.x = XTFhdr.reflectivity.x;
+			VTFhdr.reflectivity.y = XTFhdr.reflectivity.y;
+			VTFhdr.reflectivity.z = XTFhdr.reflectivity.z;
+
+			VTFhdr.imageFormat = XTFhdr.imageFormat;
+
+			VTFhdr.lowResImageFormat = XTFhdr.imageFormat;
+			VTFhdr.lowResImageWidth = XTFhdr.fallbackImageWidth;
+			VTFhdr.lowResImageHeight = XTFhdr.fallbackImageHeight;
+
+			infile.seekg(XTFhdr.imageDataOffset,std::ios::beg);
+			std::cout << infile.tellg()<<"\n";
+			for (int x = 0; x < mipcount; x++) {
+				infile.read((char*)&mipArray[x], mips[x]);
+			}
+			infile.read((char*)&lowRes, lowResSize);
+			infile.close();
+			if (blk < 8) {
+				for (int x = 0; x < mipcount; x++) {
+					char* tmp = new char[mips[x]];
+					unswizzle_rect((char*)&mipArray[x], XTFhdr.width, XTFhdr.height, (char*)&tmp, ImageFormatBlock[XTFhdr.imageFormat] * XTFhdr.width, ImageFormatBlock[XTFhdr.imageFormat]);
+					memcpy((char*)&mipArray[x], tmp, mips[x]);
+				}
+			}
+
+
+
+
+
+		}
+		else {
+			std::cout << "Error\nInput Type was not XTF format\n";
+		}
+	}
+
+}
 
 
 int main(int argc, char* argv[])
@@ -294,6 +381,7 @@ int main(int argc, char* argv[])
 		}
 		if (!strcmp(typeIn, VTFout)) {
 			std::cout << "We are converting xtf2vtf\n";
+			convertData(argv[2], argv[3], true);
 		}
 		else if (!strcmp(typeIn, XTFout)) {
 			std::cout << "We are converting vtf2xtf\n";
@@ -309,85 +397,6 @@ int main(int argc, char* argv[])
 
 }
 
-void convertData(char* in, char* out, bool isXBOX) {
-	std::ifstream infile;
-	std::ofstream outfile;
-	infile.open(in);
-	outfile.open(out);
-	XTFFileHeader_t XTFhdr = XTFFileHeader_Default();
-	VTFFileHeader_t VTFhdr = VTFFileHeader_Default();
-
-	/*int mipcount = 1;
-	int* test = mipsize(512, 512, ImageFormat::IMAGE_FORMAT_BGR888, mipcount);
-	for (int x = 0; x < mipcount; x++) std::cout << test[x] << '\n';*/
-	if (isXBOX) {
-		infile.read((char*)&XTFhdr, sizeof(XTFFileHeader_t));//Read the header in
-
-		//Setup mips
-		int mipcount;
-		int* mips = mipsize(XTFhdr.width, XTFhdr.height, XTFhdr.imageFormat, mipcount);
-		int blk = blockSize(XTFhdr.imageFormat);
-		int lowResSize = XTFhdr.fallbackImageHeight * XTFhdr.fallbackImageWidth;
-		if (blk > 2) {
-			if (blk == 8) {
-				lowResSize /= 2;
-			}
-		}else{
-			lowResSize*= ImageFormatBlock[XTFhdr.imageFormat];
-		}
-		char * lowRes = new char[lowResSize];
-		char ** mipArray = new char*[mipcount];
-
-		VTFhdr.numMipLevels = mipcount;
-
-		if (XTFhdr.flags & TextureFlags::TEXTUREFLAGS_NOMIP) {
-			VTFhdr.numMipLevels = 1;
-			mipcount = 1;
-			mipArray = new char*[mipcount];
-			char* mip = new char[mips[0]];
-			mipArray[0] = mip;
-
-		}
-		else {
-			for (int x = 0; x < mipcount; x++)mipArray[x] = new char[mips[x]];
-		}
-
-		VTFhdr.width = XTFhdr.width;
-		VTFhdr.flags = XTFhdr.flags;
-		VTFhdr.height = XTFhdr.height;
-		VTFhdr.numFrames = XTFhdr.numFrames;
-
-		VTFhdr.reflectivity.x = XTFhdr.reflectivity.x;
-		VTFhdr.reflectivity.y = XTFhdr.reflectivity.y;
-		VTFhdr.reflectivity.z = XTFhdr.reflectivity.z;
-
-		VTFhdr.imageFormat = XTFhdr.imageFormat;
-
-		VTFhdr.lowResImageFormat = XTFhdr.imageFormat;
-		VTFhdr.lowResImageWidth = XTFhdr.fallbackImageWidth;
-		VTFhdr.lowResImageHeight = XTFhdr.fallbackImageHeight;
-
-		infile.seekg(XTFhdr.imageDataOffset, std::ios_base::beg);
-		for (int x = 0; x < mipcount; x++) {
-			infile.read((char*)&mipArray[x], mips[x]);
-		}
-		infile.read((char*)&lowRes, lowResSize);
-		infile.close();
-		if (blk < 8) {
-			for (int x = 0; x < mipcount; x++) {
-				char* tmp = new char[mips[x]];
-				unswizzle_rect((char*)&mipArray[x], XTFhdr.width, XTFhdr.height, (char*)&tmp, ImageFormatBlock[XTFhdr.imageFormat] * XTFhdr.width, ImageFormatBlock[XTFhdr.imageFormat]);
-			}
-		}
-
-
-
-
-
-	}
-
-
-}
 
 
 
