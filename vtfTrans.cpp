@@ -226,37 +226,41 @@ int blockSize(ImageFormat f) {
 		return 1;
 	}
 };
-int* getRes(int w, int h) {
-	int res[13] = { 0 };
+void getRes(int &w, int &h,int ** val,int &size) {
+	int * res =  new int[13];
 	int x = 0;
 	int i = 1;
-	while ((i / w) >= 1 and (h / i) >= 1) {
-		res[x++] = ((i / w) * (h / i));
+	while ((w / i) >= 1 and (h / i) >= 1) {
+		res[x++] = ((w / i) * (h / i));
 		i = i << 1;
 	}
-	int* newres = new int[x];
-	memcpy(&newres, &res, sizeof(newres));
-	free(res);
-	return newres;
+	*val = new int[x];
+	memcpy(*val, res, x * sizeof(int));
+	size = x;
 };
-int* mipsize(int w, int h, ImageFormat f) {
+int* mipsize(int w, int h, ImageFormat f,int &mipcount) {
 	int blkSize = blockSize(f);
-	int* resSize = getRes(w, h);
+	int* resSizePtr;
+	int resDim = 1;
+	getRes(w, h, &resSizePtr, resDim);
+	mipcount = resDim;
 	if (blkSize > 2) {
 		if (blkSize == 8) {
-			for (int x = 0; x < (sizeof(*resSize) / sizeof(int)); x++) {
-				resSize[x] /= 2;
+			for (int x = 0; x < resDim; x++) {
+				resSizePtr[x] /= 2;
 			}
-			return resSize;
+			return resSizePtr;
 		}
 		else {
-			return resSize;
+			return resSizePtr;
 		}
 	}
 	else {
-		for (int x = 0; x < (sizeof(*resSize) / sizeof(int)); x++) {
-			resSize[x] *= ImageFormatBlock[f];
+		int size = ImageFormatBlock[f];
+		for (int x = 0; x < resDim; x++) {
+			resSizePtr[x] *= size;
 		}
+		return resSizePtr;
 	}
 };
 
@@ -277,6 +281,7 @@ int main(int argc, char* argv[])
 	outfile.open("test.bin", std::ios::binary);
 	outfile.write((char*)&XTFhdr, sizeof(XTFhdr));*/
 
+	
 	
 
 	if (argc > 1) {
@@ -307,10 +312,19 @@ void convertData(char* in, char* out, bool isXBOX) {
 	std::ifstream infile;
 	std::ofstream outfile;
 	infile.open(in);
-	XTFFileHeader_t XTFhdr;
-	VTFFileHeader_t* VTFhdr = (VTFFileHeader_t*)malloc(sizeof(struct VTFFileHeader_t));
+	outfile.open(out);
+	XTFFileHeader_t XTFhdr = XTFFileHeader_Default();
+	VTFFileHeader_t VTFhdr = VTFFileHeader_Default();
 
-	free(VTFhdr);
+	/*int mipcount = 1;
+	int* test = mipsize(512, 512, ImageFormat::IMAGE_FORMAT_BGR888, mipcount);
+	for (int x = 0; x < mipcount; x++) std::cout << test[x] << '\n';*/
+	if (isXBOX) {
+
+
+	}
+
+
 }
 
 
